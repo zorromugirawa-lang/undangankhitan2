@@ -67,8 +67,8 @@ function toggleAudio() {
 musicToggle.addEventListener("click", toggleAudio);
 
 // 4. COUNTDOWN TIMER (TASYAKURAN KHITAN)
-// Target: Sabtu, 15 Agustus 2026 09:00 WIB
-const targetDate = new Date("Aug 15, 2026 09:00:00").getTime();
+// Target: Kamis, 4 Juni 2026 09:00 WIB
+const targetDate = new Date("Jun 4, 2026 09:00:00 GMT+0700").getTime();
 
 const countdownInterval = setInterval(() => {
     const now = new Date().getTime();
@@ -95,10 +95,10 @@ const countdownInterval = setInterval(() => {
 
 // 5. GOOGLE CALENDAR REDIRECT
 document.getElementById("btn-calendar").addEventListener("click", () => {
-    const title = encodeURIComponent("Walimatul Khitan Muhammad Azka Al-Fatih");
-    const dates = "20260815T020000Z/20260815T100000Z"; // UTC time (09.00 WIB - 17.00 WIB)
-    const details = encodeURIComponent("Menghadiri Tasyakuran & Resepsi Khitanan Ananda Muhammad Azka Al-Fatih. Lokasi: Gedung Serbaguna Al-Barokah.");
-    const location = encodeURIComponent("Gedung Serbaguna Al-Barokah, Jl. Kebon Jeruk Raya No.12, Jakarta Barat");
+    const title = encodeURIComponent("Walimatul Khitan Muhammad Rakha Atmaja");
+    const dates = "20260604T020000Z/20260605T100000Z"; // UTC time (Kamis 4 Juni 09.00 WIB - Jum'at 5 Juni 17.00 WIB)
+    const details = encodeURIComponent("Menghadiri Tasyakuran & Resepsi Khitanan Ananda Muhammad Rakha Atmaja. Lokasi: Kp Dumadi Rt 03/07 Pagenteran Pulosari. Peta Lokasi: https://maps.app.goo.gl/12thM63srEDT71cU7");
+    const location = encodeURIComponent("Kp Dumadi Rt 03/07 Pagenteran Pulosari");
     
     const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&location=${location}`;
     window.open(googleCalendarUrl, '_blank');
@@ -152,6 +152,9 @@ function showToast(message) {
 window.copyToClipboard = copyToClipboard;
 
 // 7. RSVP FORM & LOCALSTORAGE GUESTBOOK
+// Silakan masukkan URL Web App Google Apps Script Anda di sini untuk sinkronisasi ke Google Spreadsheet
+const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbyvozoaTCRILkWoHJ9YwYRciRaznBoYmkWuZ0aKCfZ7vC1f-3Lou8Q2LLPZENYqmpIn/exec";
+
 const rsvpForm = document.getElementById("rsvp-form");
 const wishesContainer = document.getElementById("wishes-container");
 const wishCountEl = document.getElementById("wish-count");
@@ -178,7 +181,7 @@ rsvpForm.addEventListener("submit", (e) => {
     if (!name || !status || !message) return;
     
     // Dapatkan data ucapan yang ada
-    let wishes = JSON.parse(localStorage.getItem("khitan_wishes")) || [];
+    let wishes = JSON.parse(localStorage.getItem("khitan_rakha_wishes")) || [];
     
     // Tambah ucapan baru
     const newWish = {
@@ -191,7 +194,7 @@ rsvpForm.addEventListener("submit", (e) => {
     };
     
     wishes.unshift(newWish); // Tambahkan ke awal array (terbaru di atas)
-    localStorage.setItem("khitan_wishes", JSON.stringify(wishes));
+    localStorage.setItem("khitan_rakha_wishes", JSON.stringify(wishes));
     
     // Reset Form
     rsvpForm.reset();
@@ -202,15 +205,37 @@ rsvpForm.addEventListener("submit", (e) => {
     
     // Tampilkan notifikasi
     showToast("Terima kasih atas doa & konfirmasinya!");
+
+    // Kirim data ke Google Sheets secara background jika URL diisi
+    if (GOOGLE_SHEETS_URL) {
+        const formData = new FormData();
+        formData.append("name", name);
+        formData.append("status", status);
+        formData.append("guests", guests);
+        formData.append("message", message);
+        formData.append("timestamp", new Date().toLocaleString('id-ID'));
+
+        fetch(GOOGLE_SHEETS_URL, {
+            method: "POST",
+            body: formData,
+            mode: "no-cors" // no-cors agar tidak memicu error CORS saat dialihkan Google Apps Script
+        })
+        .then(() => {
+            console.log("Data RSVP berhasil dikirim ke Google Sheets!");
+        })
+        .catch(err => {
+            console.error("Gagal mengirim data RSVP ke Google Sheets:", err);
+        });
+    }
 });
 
 // Render ucapan ke UI
 function renderWishes() {
-    const wishes = JSON.parse(localStorage.getItem("khitan_wishes")) || [];
+    const wishes = JSON.parse(localStorage.getItem("khitan_rakha_wishes")) || [];
     wishCountEl.textContent = wishes.length;
     
     if (wishes.length === 0) {
-        wishesContainer.innerHTML = `<div class="empty-wishes">Belum ada ucapan. Jadilah yang pertama memberikan doa restu!</div>`;
+        wishesContainer.innerHTML = `<div class="empty-wishes">Belum ada ucapan. Jadilah yang pertama memberikan ucapan selamat dan doa!</div>`;
         return;
     }
     
@@ -324,15 +349,136 @@ navItems.forEach(item => {
     });
 });
 
-// 9. LIGHTBOX / PHOTO PREVIEW LOGIC
+// 9. GALLERY SLIDER & LIGHTBOX LOGIC
 const galleryImages = [
-    "assets/gallery_1.png",
-    "assets/gallery_2.png",
-    "assets/gallery_3.png",
-    "assets/gallery_4.png"
+    "assets/foto1.jpeg",
+    "assets/foto2.jpeg",
+    "assets/foto3.jpeg",
+    "assets/foto4.jpeg",
+    "assets/foto5.jpeg",
+    "assets/foto6.jpeg",
+    "assets/foto7.jpeg",
+    "assets/foto8.jpeg",
+    "assets/foto9.jpeg",
+    "assets/foto10.jpeg"
 ];
-let currentImageIndex = 0;
+let currentImageIndex = 0; // shared with lightbox index
+let currentSliderIndex = 0;
+let autoSlideInterval = null;
 
+const galleryTrack = document.getElementById("gallery-track");
+const galleryThumbnails = document.getElementById("gallery-thumbnails");
+const thumbButtons = document.querySelectorAll(".thumb-btn");
+
+function slideToImage(index) {
+    if (index < 0 || index >= galleryImages.length) return;
+    
+    currentSliderIndex = index;
+    currentImageIndex = index; // Keep in sync for lightbox
+    
+    // Apply slide animation
+    if (galleryTrack) {
+        galleryTrack.style.transform = `translateX(-${index * 100}%)`;
+    }
+    
+    // Update active class on thumbnails
+    thumbButtons.forEach((btn, idx) => {
+        if (idx === index) {
+            btn.classList.add("active");
+            // Auto scroll active thumbnail into center of scroll container without scrolling the main page
+            if (galleryThumbnails) {
+                const btnLeft = btn.offsetLeft;
+                const btnWidth = btn.offsetWidth;
+                const containerWidth = galleryThumbnails.offsetWidth;
+                const targetScrollLeft = btnLeft - (containerWidth / 2) + (btnWidth / 2);
+                
+                try {
+                    galleryThumbnails.scrollTo({
+                        left: targetScrollLeft,
+                        behavior: "smooth"
+                    });
+                } catch (err) {
+                    try {
+                        galleryThumbnails.scrollLeft = targetScrollLeft;
+                    } catch (e) {}
+                }
+            }
+        } else {
+            btn.classList.remove("active");
+        }
+    });
+    
+    // Reset auto-slide timer
+    resetAutoSlide();
+}
+
+function nextSlide() {
+    let nextIdx = (currentSliderIndex + 1) % galleryImages.length;
+    slideToImage(nextIdx);
+}
+
+function prevSlide() {
+    let prevIdx = (currentSliderIndex - 1 + galleryImages.length) % galleryImages.length;
+    slideToImage(prevIdx);
+}
+
+function startAutoSlide() {
+    if (!autoSlideInterval) {
+        autoSlideInterval = setInterval(nextSlide, 4500); // Slide every 4.5 seconds
+    }
+}
+
+function stopAutoSlide() {
+    if (autoSlideInterval) {
+        clearInterval(autoSlideInterval);
+        autoSlideInterval = null;
+    }
+}
+
+function resetAutoSlide() {
+    stopAutoSlide();
+    startAutoSlide();
+}
+
+// Pause auto-sliding when user interacts or hovers
+const gallerySliderEl = document.querySelector(".gallery-slider");
+if (gallerySliderEl) {
+    // Add touch swipe gesture support for mobile
+    let touchStartX = 0;
+    let touchEndX = 0;
+    
+    const handleSwipe = () => {
+        const swipeThreshold = 50; // pixels
+        if (touchStartX - touchEndX > swipeThreshold) {
+            nextSlide(); // swipe left -> next
+        } else if (touchEndX - touchStartX > swipeThreshold) {
+            prevSlide(); // swipe right -> prev
+        }
+    };
+
+    gallerySliderEl.addEventListener("mouseenter", stopAutoSlide);
+    gallerySliderEl.addEventListener("mouseleave", startAutoSlide);
+    
+    gallerySliderEl.addEventListener("touchstart", (e) => {
+        if (e.changedTouches && e.changedTouches.length > 0) {
+            touchStartX = e.changedTouches[0].screenX;
+        }
+        stopAutoSlide();
+    }, { passive: true });
+    
+    gallerySliderEl.addEventListener("touchend", (e) => {
+        if (e.changedTouches && e.changedTouches.length > 0) {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }
+        startAutoSlide();
+    }, { passive: true });
+}
+
+// Initialize slider auto slide
+startAutoSlide();
+
+// Lightbox logic (retains original modal feature when clicking on slides)
 const lightbox = document.getElementById("lightbox");
 const lightboxImg = document.getElementById("lightbox-img");
 
@@ -355,15 +501,22 @@ function prevLightbox(event) {
     event.stopPropagation();
     currentImageIndex = (currentImageIndex - 1 + galleryImages.length) % galleryImages.length;
     lightboxImg.src = galleryImages[currentImageIndex];
+    // Also sync the slider to the new photo
+    slideToImage(currentImageIndex);
 }
 
 function nextLightbox(event) {
     event.stopPropagation();
     currentImageIndex = (currentImageIndex + 1) % galleryImages.length;
     lightboxImg.src = galleryImages[currentImageIndex];
+    // Also sync the slider to the new photo
+    slideToImage(currentImageIndex);
 }
 
 // Ekspos ke global scope agar onclick di HTML dapat memanggilnya
+window.slideToImage = slideToImage;
+window.nextSlide = nextSlide;
+window.prevSlide = prevSlide;
 window.openLightbox = openLightbox;
 window.closeLightbox = closeLightbox;
 window.prevLightbox = prevLightbox;
