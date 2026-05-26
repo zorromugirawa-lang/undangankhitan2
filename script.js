@@ -97,8 +97,8 @@ const countdownInterval = setInterval(() => {
 document.getElementById("btn-calendar").addEventListener("click", () => {
     const title = encodeURIComponent("Walimatul Khitan Muhammad Rakha Atmaja");
     const dates = "20260604T020000Z/20260605T100000Z"; // UTC time (Kamis 4 Juni 09.00 WIB - Jum'at 5 Juni 17.00 WIB)
-    const details = encodeURIComponent("Menghadiri Tasyakuran & Resepsi Khitanan Ananda Muhammad Rakha Atmaja. Lokasi: Kp Dumadi Rt 03/01 Pagenteran Pulosari. Peta Lokasi: https://maps.app.goo.gl/12thM63srEDT71cU7");
-    const location = encodeURIComponent("Kp Dumadi Rt 03/01 Pagenteran Pulosari");
+    const details = encodeURIComponent("Menghadiri Tasyakuran & Resepsi Khitanan Ananda Muhammad Rakha Atmaja. Lokasi: Kr Dumadi Rt 03/01 Pagenteran Pulosari. Peta Lokasi: https://maps.app.goo.gl/12thM63srEDT71cU7");
+    const location = encodeURIComponent("Kr Dumadi Rt 03/01 Pagenteran Pulosari");
     
     const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&location=${location}`;
     window.open(googleCalendarUrl, '_blank');
